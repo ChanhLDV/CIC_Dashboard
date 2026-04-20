@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dashboard - CIC Highland | Quản lý Dự án</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f172a; --bg2:#111b33; --panel:#ffffff; --ink:#0b1220; --muted:#64748b;
+    --brand:#14532d; --brand2:#166534; --brand3:#22c55e;
+    --accent:#b45309; --accent2:#f59e0b;
+    --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626; --info:#2563eb; --pause:#7c3aed;
+    --line:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#f1f5f9;color:var(--ink);font-family:'Segoe UI',Tahoma,system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif}
+  a{color:inherit}
+  /* HEADER */
+  .hero{
+    background:linear-gradient(135deg,#052e16 0%,#14532d 40%,#166534 100%);
+    color:#fff;padding:28px 36px 70px;position:relative;overflow:hidden;
+  }
+  .hero::after{
+    content:"";position:absolute;inset:0;background:
+      radial-gradient(circle at 85% 20%,rgba(34,197,94,.25),transparent 45%),
+      radial-gradient(circle at 20% 100%,rgba(245,158,11,.2),transparent 45%);
+    pointer-events:none;
+  }
+  .hero-inner{position:relative;z-index:1;max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:54px;height:54px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;color:#14532d;font-size:22px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .brand h1{margin:0;font-size:22px;letter-spacing:.3px}
+  .brand .sub{opacity:.85;font-size:13px;margin-top:2px}
+  .meta{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+  .meta .chip{background:rgba(255,255,255,.12);padding:8px 14px;border-radius:999px;font-size:13px;border:1px solid rgba(255,255,255,.2)}
+  .meta .today{font-weight:600}
+  .title-block{max-width:1400px;margin:18px auto 0;position:relative;z-index:1}
+  .title-block h2{margin:0;font-size:28px;line-height:1.25}
+  .title-block p{margin:6px 0 0;opacity:.9;max-width:820px}
+
+  /* MAIN */
+  .wrap{max-width:1400px;margin:-50px auto 40px;padding:0 24px;position:relative;z-index:2}
+  .grid{display:grid;gap:18px}
+  .kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .kpi{
+    background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 10px 30px rgba(2,6,23,.08);
+    border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;
+  }
+  .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .kpi .value{font-size:32px;font-weight:800;line-height:1}
+  .kpi .note{font-size:12px;color:var(--muted)}
+  .kpi.good .value{color:var(--ok)}
+  .kpi.info .value{color:var(--info)}
+  .kpi.warn .value{color:var(--warn)}
+  .kpi.bad .value{color:var(--bad)}
+  .kpi.pause .value{color:var(--pause)}
+  .kpi .ico{position:absolute;right:14px;top:14px;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .kpi.good .ico{background:#dcfce7;color:var(--ok)}
+  .kpi.info .ico{background:#dbeafe;color:var(--info)}
+  .kpi.warn .ico{background:#fef3c7;color:var(--warn)}
+  .kpi.bad .ico{background:#fee2e2;color:var(--bad)}
+  .kpi.pause .ico{background:#ede9fe;color:var(--pause)}
+  .kpi.neutral .ico{background:#e2e8f0;color:#0f172a}
+
+  /* Progress bar (summary) */
+  .prog-main{
+    grid-column:1/-1;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 22px;
+    box-shadow:0 10px 30px rgba(2,6,23,.06);display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+  }
+  .prog-main .tt{font-weight:700;font-size:15px}
+  .bar{flex:1;min-width:260px;height:14px;border-radius:99px;background:#e2e8f0;overflow:hidden;position:relative}
+  .bar>span{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a)}
+  .prog-val{font-weight:800;font-size:22px;color:#14532d}
+
+  /* Cards */
+  .section{margin-top:22px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(2,6,23,.06);padding:18px 20px}
+  .card h3{margin:0 0 6px;font-size:16px}
+  .card .desc{color:var(--muted);font-size:12px;margin-bottom:14px}
+
+  .two-col{grid-template-columns:1fr 1fr}
+  .three-col{grid-template-columns:1.2fr 1fr 1fr}
+  @media(max-width:1080px){.two-col,.three-col,.kpis{grid-template-columns:1fr 1fr}}
+  @media(max-width:640px){.two-col,.three-col,.kpis{grid-template-columns:1fr}}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);color:#334155;font-weight:600;background:#f8fafc;position:sticky;top:0;z-index:1}
+  tbody td{padding:10px 8px;border-bottom:1px solid #eef2f7;vertical-align:top}
+  tbody tr:hover{background:#f8fafc}
+  .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
+  .pill.st-done{background:#dcfce7;color:#166534}
+  .pill.st-doing{background:#fef3c7;color:#92400e}
+  .pill.st-todo{background:#e2e8f0;color:#334155}
+  .pill.st-late{background:#fee2e2;color:#991b1b}
+  .pill.st-pause{background:#ede9fe;color:#5b21b6}
+  .pill.pri-Cao{background:#fee2e2;color:#991b1b}
+  .pill.pri-TB{background:#fef3c7;color:#92400e}
+  .pill.pri-Thấp{background:#e0f2fe;color:#075985}
+  .rowbar{height:6px;width:120px;background:#e2e8f0;border-radius:99px;overflow:hidden}
+  .rowbar>span{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a)}
+  .scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+
+  /* Filters */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .filters select,.filters input{
+    font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:160px;
+  }
+  .filters input{flex:1;min-width:220px}
+  .btn-reset{padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:#f8fafc;cursor:pointer}
+  .btn-reset:hover{background:#eef2f7}
+  .badge-count{background:#0f172a;color:#fff;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600}
+
+  .chart-box{position:relative;height:320px}
+  .chart-box.tall{height:420px}
+  .chart-box.xtall{height:500px}
+
+  /* Callout */
+  .callout{display:flex;gap:14px;align-items:center;padding:12px 14px;border-radius:12px;margin-bottom:14px;font-size:13px}
+  .callout.bad{background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d}
+  .callout.warn{background:#fffbeb;border:1px solid #fde68a;color:#78350f}
+
+  .late-days{color:#991b1b;font-weight:700}
+  .near-days{color:#92400e;font-weight:700}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#475569;margin-top:8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+  footer{text-align:center;color:#64748b;font-size:12px;margin:30px 0 16px}
+  .print-btn{background:rgba(255,255,255,.14);color:#fff;padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.25);cursor:pointer;font:inherit}
+  .print-btn:hover{background:rgba(255,255,255,.22)}
+  @media print{
+    .hero{background:#14532d !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .print-btn,.filters{display:none !important}
+    .scroll{max-height:none !important}
+  }
+  .tag-cat{font-size:11px;color:#0f172a;background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 8px;border-radius:6px;font-weight:600}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">
+      <div class="logo">CIC</div>
+      <div>
+        <h1>CIC HIGHLAND — DASHBOARD ĐIỀU HÀNH</h1>
+        <div class="sub">Báo cáo tiến độ dự án phục vụ lãnh đạo cấp cao · Nguồn: QUAN_LY_DU_AN_CIC_HIGHLAND.xlsx · Làm mới: 21:54 20/04/2026</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="chip today">📅 Ngày báo cáo: <b id="today"></b></div>
+      <div class="chip">🔄 Tự động tổng hợp từ Sheet CÔNG VIỆC</div>
+      <button class="print-btn" onclick="window.print()">🖨️ In / Xuất PDF</button>
+    </div>
+  </div>
+  <div class="title-block">
+    <h2>Tổng quan tiến độ &amp; Điểm nóng cần chỉ đạo</h2>
+    <p>Theo dõi 80 đầu mục công việc thuộc 12 hạng mục — từ xử lý Phytophthora, cải tạo đất, ghép cải tạo, trồng mới, cho đến thương mại hạt &amp; sản phẩm chế biến. Dashboard cập nhật theo dữ liệu BPLQ báo cáo.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- KPI ROW -->
+  <section class="grid kpis">
+    <div class="kpi neutral"><div class="ico">📊</div><span class="label">Tổng công việc</span><span class="value" id="kpi-total">0</span><span class="note">12 hạng mục · 19 chủ trì</span></div>
+    <div class="kpi info"><div class="ico">🛠️</div><span class="label">Đang thực hiện</span><span class="value" id="kpi-doing">0</span><span class="note" id="kpi-doing-pct"></span></div>
+    <div class="kpi good"><div class="ico">✅</div><span class="label">Hoàn thành</span><span class="value" id="kpi-done">0</span><span class="note" id="kpi-done-pct"></span></div>
+    <div class="kpi neutral"><div class="ico">🕒</div><span class="label">Chưa bắt đầu</span><span class="value" id="kpi-todo">0</span><span class="note" id="kpi-todo-pct"></span></div>
+    <div class="kpi bad"><div class="ico">⚠️</div><span class="label">Quá hạn</span><span class="value" id="kpi-late">0</span><span class="note">Cần xử lý trước giao ban</span></div>
+    <div class="kpi warn"><div class="ico">⏰</div><span class="label">Sắp tới hạn (7 ngày)</span><span class="value" id="kpi-near">0</span><span class="note">Ưu tiên theo dõi sát</span></div>
+  </section>
+
+  <!-- PROGRESS SUMMARY -->
+  <section class="grid" style="margin-top:18px">
+    <div class="prog-main">
+      <div class="tt">🎯 Tiến độ trung bình toàn dự án</div>
+      <div class="bar"><span id="prog-bar" style="width:0%"></span></div>
+      <div class="prog-val" id="prog-val">0%</div>
+      <div style="color:var(--muted);font-size:13px;">Tính bình quân theo % hoàn thành thực tế các đầu mục công việc.</div>
+    </div>
+  </section>
+
+  <!-- ALERTS -->
+  <section class="section grid two-col">
+    <div class="card">
+      <h3 style="color:#991b1b">🚨 Công việc QUÁ HẠN cần chỉ đạo ngay</h3>
+      <div class="desc">Sắp xếp theo số ngày trễ giảm dần. Click để xem chi tiết phía dưới.</div>
+      <div class="scroll">
+        <table id="tbl-late">
+          <thead><tr><th>Mã</th><th>Công việc</th><th>Chủ trì</th><th>Deadline</th><th>Trễ</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="color:#92400e">⏳ Deadline trong 7 ngày tới</h3>
+      <div class="desc">Công việc cần hoàn tất trước ngày <b id="near-until"></b>.</div>
+      <div class="scroll">
+        <table id="tbl-near">
+          <thead><tr><th>Mã</th><th>Công việc</th><th>Chủ trì</th><th>Deadline</th><th>Còn</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARTS 1 -->
+  <section class="section grid three-col">
+    <div class="card">
+      <h3>Cơ cấu trạng thái công việc</h3>
+      <div class="desc">Phân bổ 80 đầu mục theo trạng thái hiện tại.</div>
+      <div class="chart-box"><canvas id="chStatus"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Ưu tiên</h3>
+      <div class="desc">Mức ưu tiên công việc trong kỳ.</div>
+      <div class="chart-box"><canvas id="chPriority"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Phân bổ theo Khối</h3>
+      <div class="desc">Khối Sản Xuất (A–H) vs Thương Mại (I–L).</div>
+      <div class="chart-box"><canvas id="chBlock"></canvas></div>
+    </div>
+  </section>
+
+  <!-- CHARTS 2 -->
+  <section class="section grid two-col">
+    <div class="card">
+      <h3>Tiến độ theo Hạng mục</h3>
+      <div class="desc">% hoàn thành trung bình và cơ cấu trạng thái từng hạng mục (A → L).</div>
+      <div class="chart-box tall"><canvas id="chByCat"></canvas></div>
+      <div class="legend">
+        <span><i class="dot" style="background:#16a34a"></i>Hoàn thành</span>
+        <span><i class="dot" style="background:#f59e0b"></i>Đang thực hiện</span>
+        <span><i class="dot" style="background:#94a3b8"></i>Chưa bắt đầu</span>
+        <span><i class="dot" style="background:#dc2626"></i>Trễ hạn</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Tải công việc theo Chủ trì (Top)</h3>
+      <div class="desc">Số công việc chủ trì theo từng cá nhân/bộ phận.</div>
+      <div class="chart-box tall"><canvas id="chOwner"></canvas></div>
+    </div>
+  </section>
+
+  <!-- CHARTS 3 -->
+  <section class="section grid two-col">
+    <div class="card">
+      <h3>Lịch Deadline theo tháng</h3>
+      <div class="desc">Khối lượng công việc dồn vào các tháng — giúp cân đối nguồn lực.</div>
+      <div class="chart-box"><canvas id="chDeadline"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Điểm nóng: Hạng mục có nhiều CV quá hạn / sắp hạn</h3>
+      <div class="desc">Hạng mục cần chỉ đạo quyết liệt.</div>
+      <div class="chart-box"><canvas id="chHot"></canvas></div>
+    </div>
+  </section>
+
+  <!-- DETAIL TABLE -->
+  <section class="section">
+    <div class="card">
+      <h3>📋 Chi tiết công việc (có bộ lọc)</h3>
+      <div class="desc">Sử dụng bộ lọc để khoanh vùng theo hạng mục, trạng thái, chủ trì hoặc tìm kiếm tự do.</div>
+      <div class="filters">
+        <select id="f-cat"><option value="">— Tất cả hạng mục —</option></select>
+        <select id="f-status"><option value="">— Tất cả trạng thái —</option></select>
+        <select id="f-owner"><option value="">— Tất cả chủ trì —</option></select>
+        <select id="f-flag">
+          <option value="">— Tất cả tình trạng hạn —</option>
+          <option value="late">Chỉ xem: Quá hạn</option>
+          <option value="near">Chỉ xem: Sắp tới hạn (7 ngày)</option>
+          <option value="onschedule">Chỉ xem: Đúng tiến độ</option>
+        </select>
+        <input id="f-q" placeholder="🔎 Tìm theo mã CV, tên công việc, mô tả..."/>
+        <button class="btn-reset" id="btnReset">Reset</button>
+        <span style="margin-left:auto" class="badge-count"><span id="rowCount">0</span> CV</span>
+      </div>
+      <div class="scroll" style="max-height:560px">
+        <table id="tbl-main">
+          <thead>
+            <tr>
+              <th>Mã</th><th>Hạng mục</th><th>Công việc</th><th>Chủ trì</th>
+              <th>Deadline</th><th>Ưu tiên</th><th>Trạng thái</th><th>%</th><th>Vướng mắc / Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    © CIC Highland · Dashboard tự động từ file QUAN_LY_DU_AN_CIC_HIGHLAND.xlsx — Cập nhật theo dữ liệu BPLQ · Mọi thay đổi đề nghị phản ánh qua Thư ký BĐH.
+  </footer>
+</main>
+
+<script id="data" type="application/json">[{"ma_cv":"A.01","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Khơi thông đường thoát nước nội đồng","mo_ta":"Lập tiêu chuẩn kỹ thuật / nhiệm vụ thiết kế, biện pháp thi công; xác định khu vực ưu tiên theo đặc tính và hiện trạng từng lô thửa.","chu_tri":"Mr Trí (QLSX)","bplq":"QLL theo lô thửa; QLSX lên PA và KH thực hiện, TBKT thẩm định cho ý kiến, TGĐ phê duyệt","ngay_bat_dau":"2026-04-01","deadline":"2026-04-10","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Tỉ lệ nhiễm phytop toàn vườn 38-41%. Ưu tiên lô 6.8, 7.6, 7.8 (>50%)."},{"ma_cv":"A.02","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Tổ chức thi công đào rãnh","mo_ta":"Xây dựng, tổ chức, triển khai kế hoạch thi công đào rãnh liếp. Thực hiện 20-30 ngày kể từ ngày có máy; triển khai W2/5, hoàn tất trước 30/06.","chu_tri":"Mr Hùng (TGĐ)","bplq":"QLL/QLSX theo dõi/giám sát nghiệm thu; Nhà thầu thực hiện","ngay_bat_dau":"2026-05-12","deadline":"2026-06-30","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Phải xong trước mùa mưa."},{"ma_cv":"A.03","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Mua máy đào bánh lốp + thiết bị đào rãnh","mo_ta":"Khảo sát, lựa chọn và mua 01 máy đào bánh lốp + thiết bị đào rãnh. Deadline về đến công trường: 15/05.","chu_tri":"Mr Tuấn (CT HĐTC)","bplq":"Mr Hùng; Ms Phương","ngay_bat_dau":"2026-04-09","deadline":"2026-05-15","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":" - Đề xuất cung cấp thiết bị: https://request.base.vn/requests/group/direct?request=2720677 : Ngày 15/04","ngay_cap_nhat":"15/04/2026","nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"A.04","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Sắp xếp nguồn ngân sách mua máy đào bánh lốp","mo_ta":"Sắp xếp nguồn vốn bổ sung để mua 01 máy đào bánh lốp.","chu_tri":"Mr Chánh (GĐ Tài Chính)","bplq":"P. Tài Chính Kế toán","ngay_bat_dau":"2026-04-09","deadline":"2026-04-30","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Điều kiện tiên quyết của A.03."},{"ma_cv":"A.05","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Cải tạo đường nội đồng + đặt cống thoát nước","mo_ta":"Làm việc với nhà thầu xây dựng/tổ chức/triển khai cải tạo đường nội đồng. Thời gian 30 ngày kể từ ngày đủ điều kiện khởi công.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Nhà thầu; Ms Phương","ngay_bat_dau":"2026-04-09","deadline":"2026-05-15","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Deadline gốc 30/04, có thể điều chỉnh 15/05."},{"ma_cv":"A.06","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Ngân sách cải tạo đường nội đồng","mo_ta":"Sắp xếp nguồn ngân sách cải tạo đường + đặt cống thoát nước (dự kiến 300-500 triệu đồng).","chu_tri":"Mr Chánh (GĐ Tài Chính)","bplq":"Mr Hùng","ngay_bat_dau":"2026-04-09","deadline":"2026-04-20","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":500000000,"ghi_chu":"Dự kiến 300-500 triệu."},{"ma_cv":"A.07","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Xây dựng bảng tiêu chí theo dõi - Phương án Vôi","mo_ta":"XD bảng tiêu chí theo dõi định kỳ (15 ngày đến 5 tuần) đánh giá hiệu quả bón vôi định kỳ 1 tấn/ha + đào rãnh.","chu_tri":"Mr Trí (QLSX)","bplq":"QLL theo dõi; TBKT thẩm định","ngay_bat_dau":"2026-04-09","deadline":"2026-05-15","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Phương án đối chứng truyền thống."},{"ma_cv":"A.08","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Xây dựng bảng tiêu chí theo dõi - Phương án Vi sinh","mo_ta":"XD bảng tiêu chí theo dõi định kỳ (15 ngày đến 5 tuần) đánh giá phục hồi rễ + ngăn chặn nấm từ đất.","chu_tri":"Mr Trí (QLSX)","bplq":"QLL theo dõi; TBKT thẩm định","ngay_bat_dau":"2026-04-09","deadline":"2026-05-15","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Phương án đối chứng sinh học."},{"ma_cv":"A.09","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Theo dõi & báo cáo kết quả đối chứng Vôi/Vi sinh","mo_ta":"QLL theo dõi sát hiện trạng theo bảng tiêu chí và báo cáo định kỳ.","chu_tri":"QLL / QLNT","bplq":"QLSX; TBKT","ngay_bat_dau":"2026-05-15","deadline":"2026-07-31","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"A.10","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Thẩm định kết quả đối chứng Vôi/Vi sinh","mo_ta":"TBKT thẩm định kết quả đối chứng để có cơ sở ban hành quy trình chuẩn.","chu_tri":"Mr Vi Sơn (P.TGĐ Kỹ Thuật)","bplq":"QLSX; QLL","ngay_bat_dau":"2026-08-01","deadline":"2026-08-31","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"A.11","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Chuẩn hóa quy trình áp dụng niên vụ mới","mo_ta":"Sau khi có kết quả đối chứng, chuẩn hóa quy trình thành văn bản áp dụng đồng loạt từ niên vụ mới (T9/2026).","chu_tri":"Mr Vi Sơn (P.TGĐ Kỹ Thuật)","bplq":"QLSX; BĐH","ngay_bat_dau":"2026-09-01","deadline":"2026-09-30","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"A.12","hang_muc":"A. Xử lý Phytophthora & Hạ tầng thoát nước","cong_viec":"Thí điểm chế phẩm sinh học Trichoderma 5ha","mo_ta":"Thí điểm xử lý bằng Trichoderma trên 5 ha để đánh giá hiệu quả.","chu_tri":"QLSX","bplq":"TBKT; QLL","ngay_bat_dau":"2026-04-09","deadline":"2026-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Khu vực thí điểm cần xác định."},{"ma_cv":"B.01","hang_muc":"B. Phân vi sinh & Cải tạo đất","cong_viec":"Hoàn thiện/phản biện Đề án Men Vi Sinh Hữu Cơ - Cải Tạo đất","mo_ta":"Hoàn thiện nội dung và phản biện về mặt kỹ thuật cho Đề án Men Vi Sinh Hữu Cơ - Cải Tạo đất.","chu_tri":"Mr Vi Sơn (TBKT)","bplq":"Mr Trí","ngay_bat_dau":"2026-04-15","deadline":"2026-04-21","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Thứ 2,3 tuần sau cuộc họp 15/04."},{"ma_cv":"B.02","hang_muc":"B. Phân vi sinh & Cải tạo đất","cong_viec":"Bổ sung nội dung Đề án","mo_ta":"Bổ sung các nội dung còn thiếu theo yêu cầu phản biện.","chu_tri":"Mr Vi Sơn (TBKT)","bplq":"Mr Trí","ngay_bat_dau":"2026-04-15","deadline":"2026-04-21","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"B.03","hang_muc":"B. Phân vi sinh & Cải tạo đất","cong_viec":"Bổ sung kinh phí thử nghiệm ~12 triệu đồng","mo_ta":"Sắp xếp bổ sung kinh phí cho việc thử nghiệm (dự kiến ~12 triệu/thửa).","chu_tri":"Mr Chánh (GĐ Tài Chính)","bplq":"Mr Vi Sơn","ngay_bat_dau":"2026-04-15","deadline":"2026-04-25","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":12000000,"ghi_chu":"Theo đề án của Mr Vi Sơn."},{"ma_cv":"B.04","hang_muc":"B. Phân vi sinh & Cải tạo đất","cong_viec":"Tiêu chí & quy trình sản xuất phân vi sinh, phân chuồng","mo_ta":"Xây dựng tiêu chí và quy trình thực hiện sản xuất phân vi sinh, phân chuồng tại chỗ.","chu_tri":"Mr Vi Sơn (TBKT)","bplq":"Mr Bách","ngay_bat_dau":"2026-04-15","deadline":"2026-05-15","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"B.05","hang_muc":"B. Phân vi sinh & Cải tạo đất","cong_viec":"Kéo trang trại gà về lấy phân + tiết kiệm điện NLMT","mo_ta":"Làm việc với các trang trại gà để đưa về khu vực công ty, vừa lấy nguồn phân hữu cơ tại chỗ, vừa tiết kiệm chi phí điện qua NLMT.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Mr Chánh","ngay_bat_dau":"2026-04-09","deadline":"2026-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Giao trong cuộc họp 01/04."},{"ma_cv":"C.01","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"Xác định khối lượng & vị trí hàng muồng thuộc mật độ hủy","mo_ta":"Hàng muồng khẩu độ 50m-100m bị hủy; hàng muồng khu vực không còn ca cao ko ưu tiên cắt dọn bây giờ; hàng muồng còn ca cao ưu tiên dọn dẹp để ghép TD9, TD10.","chu_tri":"Mr Trí (CNDA - QLSX)","bplq":"QLL; Nhà thầu","ngay_bat_dau":"2026-04-09","deadline":"2026-04-14","uu_tien":"Cao","trang_thai":"Hoàn thành","pct_hoan_thanh":1,"ket_qua":"- Đề xuất cắt hủy hàng muồng tại https://request.base.vn/requests/group/direct?request=2715964","ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"C.02","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"Thi công cắt hàng muồng hủy","mo_ta":"Giao nhà thầu bên ngoài thực hiện cắt hàng muồng theo khối lượng/vị trí đã xác định.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Nhà thầu; Mr Trí","ngay_bat_dau":"2026-04-15","deadline":"2026-04-30","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"C.03","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"Tiêu chí & kế hoạch xử lý hàng muồng giữ lại","mo_ta":"Xây dựng tiêu chí, kế hoạch xử lý hàng muồng giữ lại và kế hoạch chăm sóc đặc thù (rong tỉa, kế hoạch ghép) đối với hàng ca cao hai bên hàng muồng. Ưu tiên khu vực A → A1 → B.","chu_tri":"QLL / QLNT","bplq":"QLSX hoàn thiện; TBKT thẩm định","ngay_bat_dau":"2026-04-09","deadline":"2026-04-15","uu_tien":"Cao","trang_thai":"Hoàn thành","pct_hoan_thanh":1,"ket_qua":"- Đề xuất cắt hủy hàng muồng tại https://request.base.vn/requests/group/direct?request=2715964","ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Deadline 15/04 từ BBH 01/04."},{"ma_cv":"C.04","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"Thẩm định kế hoạch hàng muồng giữ lại","mo_ta":"TBKT thẩm định nội dung kế hoạch xử lý hàng muồng giữ lại do QLL xây dựng.","chu_tri":"Mr Vi Sơn (TBKT)","bplq":"QLSX","ngay_bat_dau":"2026-04-15","deadline":"2026-04-20","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"C.05","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"Thử nghiệm cắt tỉa thưa mật độ 1-2 thửa","mo_ta":"Trước khi triển khai đồng loạt, thực hiện thử nghiệm cắt tỉa thưa thêm mật độ trên 1-2 thửa để đánh giá tác động.","chu_tri":"QLSX","bplq":"QLL; TBKT","ngay_bat_dau":"2026-04-20","deadline":"2026-05-15","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"C.06","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"Nghiên cứu tiêu chí kỹ thuật Drum mulcher","mo_ta":"Xác định tiêu chí kỹ thuật: đường kính lưỡi cắt 15cm, máy cày 82-95HP, bề rộng làm việc 1.2-1.4m.","chu_tri":"QLSX","bplq":"Mr Vi Sơn (TBKT)","ngay_bat_dau":"2026-04-09","deadline":"2026-04-20","uu_tien":"Trung bình","trang_thai":"Hoàn thành","pct_hoan_thanh":1,"ket_qua":" - Đề xuất cung cấp thiết bị: https://request.base.vn/requests/group/direct?request=2720677 : Ngày 15/04","ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Xử lý cành muồng/keo sau cắt tỉa."},{"ma_cv":"C.07","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"Mua Drum mulcher","mo_ta":"Phụ trách mua hàng Drum mulcher; deadline 10 ngày hàng về đến VN.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Ms Phương","ngay_bat_dau":"2026-04-20","deadline":"2026-05-10","uu_tien":"Trung bình","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"C.08","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"Điều chỉnh ngân sách Drum mulcher","mo_ta":"Điều chỉnh ngân sách mua Drum mulcher.","chu_tri":"Mr Chánh (GĐ Tài Chính)","bplq":"Mr Hùng","ngay_bat_dau":"2026-04-09","deadline":"2026-04-20","uu_tien":"Trung bình","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"C.09","hang_muc":"C. Hủy hàng muồng & Chăm sóc đặc thù","cong_viec":"E1 - Rong tỉa hàng muồng + tưới nước trước khi ghép","mo_ta":"Hiện trạng E1: TD9,10 hai bên hàng muồng hơn 3000 cây. Đề xuất rong tỉa hàng muồng cao hơn, chỉ duy trì tưới nước, sau đó mới thực hiện ghép.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":"QLSX; TBKT","ngay_bat_dau":"2026-04-15","deadline":"2026-05-31","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"D.01","hang_muc":"D. Cơ chế KPIs & Quản trị theo lô","cong_viec":"Cơ chế phân quyền phê duyệt - Hạng mục kỹ thuật","mo_ta":"Thống nhất cơ chế phân quyền phê duyệt cho các hạng mục kỹ thuật.","chu_tri":"BĐH","bplq":"TBKT; Mr Chánh","ngay_bat_dau":"2026-04-15","deadline":"2026-04-22","uu_tien":"Cao","trang_thai":"Hoàn thành","pct_hoan_thanh":1,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"D.02","hang_muc":"D. Cơ chế KPIs & Quản trị theo lô","cong_viec":"Cơ chế chăm sóc 50/50 (chuẩn 50% + khoán KTV 50%)","mo_ta":"Phân bổ ngân sách: 50% theo quy trình chuẩn của công ty, 50% là quỹ khoán chủ động để KTV tự quyết định phân bón hữu cơ/nước tưới/BVTV đặc thù.","chu_tri":"BĐH","bplq":"Mr Chánh; TBKT","ngay_bat_dau":"2026-04-09","deadline":"2026-04-30","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Cơ sở của cơ chế thưởng KPI vượt ngưỡng."},{"ma_cv":"D.03","hang_muc":"D. Cơ chế KPIs & Quản trị theo lô","cong_viec":"Đăng ký KPI sản lượng theo lô thửa","mo_ta":"KTV tự đăng ký mức KPI cao hơn bình quân (vd từ 500 lên 700 kg). Hưởng % thưởng trên mức vượt trội. E1 có 4 thửa đồng đều ~400 kg hạt khô/ha.","chu_tri":"QLL / QLNT","bplq":"QLSX; TBKT; BĐH","ngay_bat_dau":"2026-04-09","deadline":"2026-04-30","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"D.04","hang_muc":"D. Cơ chế KPIs & Quản trị theo lô","cong_viec":"Thí điểm A1 - Thửa 1.3 (4,69 ha)","mo_ta":"Chế độ chăm sóc đặc biệt A1 cho thửa 1.3 (độ dốc thoát nước tốt, tỷ lệ bệnh thấp). Biện pháp: tỉa cành thủ công, tăng phân hữu cơ (gà, bò, humic), kiểm soát nghiêm ngặt Phytophthora.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":"QLSX; TBKT","ngay_bat_dau":"2026-04-09","deadline":"2026-12-31","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Vườn mẫu vượt ngưỡng hòa vốn."},{"ma_cv":"D.05","hang_muc":"D. Cơ chế KPIs & Quản trị theo lô","cong_viec":"Triển khai chế độ A2 cho 9,74 ha tại E1","mo_ta":"Chế độ A2 với ngân sách dự phòng chủ động để vật tư (phân, thuốc) được cung ứng đúng thời điểm, tránh trễ lịch trình.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":"QLSX; Mr Chánh","ngay_bat_dau":"2026-04-09","deadline":"2026-12-31","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"D.06","hang_muc":"D. Cơ chế KPIs & Quản trị theo lô","cong_viec":"Cập nhật kết quả thí điểm A1/A2","mo_ta":"BPLQ cập nhật kết quả triển khai thí điểm A1/A2 tại E1.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":"QLSX; BĐH","ngay_bat_dau":"2026-04-09","deadline":"2026-04-18","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Deadline 18/04 từ BBH 01/04."},{"ma_cv":"D.07","hang_muc":"D. Cơ chế KPIs & Quản trị theo lô","cong_viec":"Chọn 5-7 lô A+/A1 khu vực E1, E2","mo_ta":"Chọn 5-7 lô tốt nhất khu E1, E2 (lịch sử đạt 660 kg hạt khô/ha) để đưa vào danh mục chăm sóc đặc biệt A+/A1, đầu tư thêm kinh phí chứng minh năng suất tối đa.","chu_tri":"QLL / QLNT","bplq":"QLSX; TBKT; BĐH","ngay_bat_dau":"2026-04-09","deadline":"2026-04-30","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"E.01","hang_muc":"E. Ghép cải tạo","cong_viec":"Xây dựng tiêu chí ghép cải tạo","mo_ta":"Xây dựng tiêu chí ghép cải tạo trên diện tích khu vực ưu tiên A1 → A2.","chu_tri":"Mr Huy (CNDA - KSTT)","bplq":"QLL; TBKT","ngay_bat_dau":"2026-04-09","deadline":"2026-04-25","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"E.02","hang_muc":"E. Ghép cải tạo","cong_viec":"Triển khai danh sách chi tiết ghép","mo_ta":"QLL triển khai danh sách chi tiết các cây/khu vực cần ghép theo tiêu chí.","chu_tri":"QLL / QLNT","bplq":"CNDA; TBKT","ngay_bat_dau":"2026-04-25","deadline":"2026-05-15","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"E.03","hang_muc":"E. Ghép cải tạo","cong_viec":"Thẩm định & phê duyệt kế hoạch ghép","mo_ta":"TBKT thẩm định và phê duyệt kế hoạch ghép trước khi triển khai.","chu_tri":"Mr Vi Sơn (TBKT)","bplq":"CNDA; QLL","ngay_bat_dau":"2026-05-15","deadline":"2026-05-31","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"E.04","hang_muc":"E. Ghép cải tạo","cong_viec":"Đảm bảo nguồn bo TD6 giai đoạn 1","mo_ta":"Đảm bảo nguồn chồi (bo) TD6 cho giai đoạn 1 - ghép giống ổn định, ra hoa bền bỉ lên các gốc cây hiện hữu.","chu_tri":"QLSX","bplq":"TBKT; QLL","ngay_bat_dau":"2026-04-15","deadline":"2026-06-30","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"TD6 cho 10 quả sau 1 năm."},{"ma_cv":"E.05","hang_muc":"E. Ghép cải tạo","cong_viec":"Kế hoạch ghép 74 ha TD9/TD10 - giai đoạn 2","mo_ta":"Khi đủ quỹ chồi giống năng suất cao (MC01, TD33), ghép dặm/bổ sung các cành còn lại để đẩy sản lượng lên mức tối đa.","chu_tri":"QLSX","bplq":"CNDA; TBKT; QLL","ngay_bat_dau":"2027-01-01","deadline":"2027-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Tỉ lệ sống ghép 72-98%; CP ghép 2 lần ~20k/cây."},{"ma_cv":"E.06","hang_muc":"E. Ghép cải tạo","cong_viec":"R&D thiết kế mô hình thử nghiệm ghép","mo_ta":"R&D được quyền thiết kế mô hình để thử nghiệm các phương án ghép.","chu_tri":"R&D","bplq":"QLSX; TBKT","ngay_bat_dau":"2026-04-09","deadline":"2026-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.01","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Chuyển đổi TD3 → TD33 và TD54 trên layout trồng mới","mo_ta":"Hoàn thiện tổ hợp giống trên layout trồng mới tăng tính tương hợp phấn.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":"Mr Vi Sơn (TBKT)","ngay_bat_dau":"2026-04-01","deadline":"2026-04-08","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.02","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Thẩm định tổ hợp giống trên layout","mo_ta":"TBKT thẩm định tổ hợp giống do QLNT hoàn thiện.","chu_tri":"Mr Vi Sơn (TBKT)","bplq":"Mr Lộc","ngay_bat_dau":"2026-04-08","deadline":"2026-04-10","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.03","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Bổ sung hàng muồng 1 năm giữa hàng ca cao và hàng muồng 3 năm","mo_ta":"Bổ sung 01 hàng muồng 1 năm giữa hàng ca cao và hàng muồng 3 năm. Khoảng cách tối thiểu 1.5m giữa hàng muồng và hàng ca cao.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":"QLSX; TBKT","ngay_bat_dau":"2026-04-15","deadline":"2026-05-31","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.04","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Thiết kế hàng keo lai chắn gió biên giáp ngập","mo_ta":"Quy hoạch biên giáp ngập: trồng keo lai mật độ 2x2, diện tích 3 ha để cải thiện khí hậu và chắn gió. Đã done về mật độ & khu vực.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":" Mr Vi Sơn, Mr Trí;","ngay_bat_dau":"2026-04-09","deadline":"2026-04-20","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.05","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Hoàn chỉnh KH trồng mới + dự trù vật tư cây giống","mo_ta":"Hoàn chỉnh kế hoạch trồng mới và dự trù vật tư cây giống trước 20/04.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":" Mr Vi Sơn, Mr Trí;","ngay_bat_dau":"2026-04-09","deadline":"2026-04-20","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.06","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Thực hiện trồng keo lai biên giáp ngập","mo_ta":"Thời điểm trồng 30/06 sau khi đủ điều kiện.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":"QLSX","ngay_bat_dau":"2026-06-15","deadline":"2026-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.07","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Phân tích khu ngập: chuối vs dừa vs măng","mo_ta":"Lựa chọn trồng chuối (sinh khối) vs dừa (dài hạn) hoặc măng ở khu ngập.","chu_tri":"Mr Hùng (TGĐ)","bplq":"TBKT; QLSX","ngay_bat_dau":"2026-04-09","deadline":"2026-05-15","uu_tien":"Trung bình","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Hiệu quả kinh tế + cải thiện đất."},{"ma_cv":"F.08","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Sản xuất phân xanh - Kế hoạch & quy hoạch","mo_ta":"Kế hoạch sản xuất phân xanh, quy hoạch khu vực sản xuất.","chu_tri":"Mr Vi Sơn (TBKT)","bplq":"Mr Bách","ngay_bat_dau":"2026-04-15","deadline":"2026-05-31","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.09","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Trồng dừa bờ bao cảnh quan NTE1","mo_ta":"Trồng dừa khu vực bờ bao cảnh quan NTE1, mật độ 5x5. Xác định số lượng và vị trí cụ thể. Hoàn thành trước 30/04.","chu_tri":"Mr Lộc (CNDA - QLNT E1)","bplq":"QLSX","ngay_bat_dau":"2026-04-09","deadline":"2026-04-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.10","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Trồng dặm - Chủ trương & kế hoạch","mo_ta":"Phê duyệt chủ trương trồng dặm; QLSX xây dựng kế hoạch trồng dặm đảm bảo tỉ lệ sống cao.","chu_tri":"QLSX","bplq":"TBKT; QLL","ngay_bat_dau":"2026-04-09","deadline":"2026-05-15","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"F.11","hang_muc":"F. Trồng mới ca cao & Cây che bóng","cong_viec":"Phương án cho khu vực đã hủy ca cao + muồng","mo_ta":"Những chỗ đã hủy ca cao + nay hủy muồng: trồng lại hàng ca cao giống tốt. Khu vực hàng muồng chặt: không làm gì nữa. Không làm hàng lối đi để cắt tỉa hàng muồng hoặc xem xét trồng chuối.","chu_tri":"Mr Trí (CNDA - QLSX)","bplq":"QLL; TBKT","ngay_bat_dau":"2026-04-15","deadline":"2026-05-15","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"G.01","hang_muc":"G. Cây ngắn ngày (Gấc/Lạc/Vừng)","cong_viec":"Xây dựng chi tiết dự án thử nghiệm 1 ha gấc lai đen tại Easup","mo_ta":"Xây dựng chi tiết dự án thử nghiệm 1 ha gấc lai đen tại vùng đất Easup để đánh giá hiệu quả (định mức nhân công + sản lượng) trước khi trồng đồng loạt.","chu_tri":"Mr Huy (CNDA - KSTT)","bplq":"Mr Hùng; TBKT","ngay_bat_dau":"2026-04-09","deadline":"2026-04-13","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"G.02","hang_muc":"G. Cây ngắn ngày (Gấc/Lạc/Vừng)","cong_viec":"Phản biện kỹ thuật dự án gấc","mo_ta":"BP Kỹ thuật phản biện kỹ thuật dự án gấc thử nghiệm.","chu_tri":"Mr Vi Sơn (TBKT)","bplq":"Mr Huy","ngay_bat_dau":"2026-04-13","deadline":"2026-04-18","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"G.03","hang_muc":"G. Cây ngắn ngày (Gấc/Lạc/Vừng)","cong_viec":"Phản biện hiệu quả đầu tư dự án gấc","mo_ta":"Tài chính phản biện hiệu quả đầu tư dự án gấc.","chu_tri":"Mr Chánh (GĐ Tài Chính)","bplq":"Mr Huy","ngay_bat_dau":"2026-04-13","deadline":"2026-04-18","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"G.04","hang_muc":"G. Cây ngắn ngày (Gấc/Lạc/Vừng)","cong_viec":"Tổng hợp nội dung & kết luận cuối báo cáo BĐH - Gấc","mo_ta":"Ms Phương tổng hợp nội dung phản biện. Mr Hùng kết luận cuối trình BĐH.","chu_tri":"Ms Phương (Thư ký BĐH)","bplq":"Mr Hùng; Mr Huy","ngay_bat_dau":"2026-04-18","deadline":"2026-04-25","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"G.05","hang_muc":"G. Cây ngắn ngày (Gấc/Lạc/Vừng)","cong_viec":"Phân tích quy trình kỹ thuật chi tiết cây gấc","mo_ta":"Tương thích cây trồng, quy trình sản xuất chăm sóc, hạn chế/rủi ro, xung đột/không xung đột về tài nguyên đầu vào với cây trồng chính. Chi tiết kế hoạch thực hiện và khu vực.","chu_tri":"Mr Huy (CNDA - KSTT)","bplq":"TBKT; QLSX","ngay_bat_dau":"2026-04-13","deadline":"2026-04-25","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"G.06","hang_muc":"G. Cây ngắn ngày (Gấc/Lạc/Vừng)","cong_viec":"Kịch bản thương mại đầu ra gấc","mo_ta":"Kịch bản thương mại đầu ra với từng mô hình trồng mới. Liên hệ Ms An để kết hợp đầu ra.","chu_tri":"Ms Phương (Thư ký BĐH)","bplq":"Mr Hùng; Ms An","ngay_bat_dau":"2026-04-13","deadline":"2026-04-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"G.07","hang_muc":"G. Cây ngắn ngày (Gấc/Lạc/Vừng)","cong_viec":"Đánh giá duy trì SX khu E4 (100 ha đã giải phóng MB)","mo_ta":"Đánh giá phương án duy trì sản xuất tại khu vực E4 trên diện tích 100 ha đã giải phóng mặt bằng.","chu_tri":"Mr Hùng (TGĐ)","bplq":"QLSX; Mrs Hương","ngay_bat_dau":"2026-04-15","deadline":"2026-05-15","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"H.01","hang_muc":"H. Cơ cấu tổ chức & Điều hành","cong_viec":"Điều chỉnh cơ cấu tổ chức - TGĐ Điều hành → CT HĐTV","mo_ta":"Mr Sơn: PGĐ ĐH kỹ thuật SX. \nMr Trí: GĐ Sản Xuất.\nMr Hùng: TGĐ _Điều hành sản xuất. \nMrs Hương: Ban Điều Hành _ Thương mại. \nMr Chánh: GĐTC _Điều hành/Phụ trách tài chính. \nThư ký BĐH: Ms Phương.","chu_tri":"Mr Hồng Sơn (CT HĐTV)","bplq":null,"ngay_bat_dau":"2026-04-06","deadline":"2026-04-30","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0.8,"ket_qua":" - Đã hoàn thành Quyết định/thông báo/điều chỉnh SĐTC\n - Đang triển khai tổ chức chi tiết điều động và sắp xếp nhân sự chi tiết khối Sản Xuất Trực Tiếp theo KHSX ","ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":"Tần suất tham gia Mr Sơn: 1 tháng 2 lần."},{"ma_cv":"H.02","hang_muc":"H. Cơ cấu tổ chức & Điều hành","cong_viec":"Mở các quỹ ngân sách/khoán","mo_ta":"Thiết lập các quỹ ngân sách và khoán cho các cơ chế KPI và chăm sóc đặc biệt.","chu_tri":"Mr Chánh (GĐ Tài Chính)","bplq":"BĐH","ngay_bat_dau":"2026-04-06","deadline":"2026-04-30","uu_tien":"Cao","trang_thai":"Đang thực hiện","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.01","hang_muc":"I. Thương mại - Hạt","cong_viec":"Marou - Tăng trưởng sản lượng 50% (50 tấn) / giá trị 30%","mo_ta":"Premium Local: Marou đặt mục tiêu tăng trưởng sản lượng 50% tương đương 50 tấn, giá trị 30%. Chiếm 40% sản lượng CIC.","chu_tri":"Mrs Hương (Thương mại)","bplq":"Chị Đỗ Hương","ngay_bat_dau":"2026-04-06","deadline":"2026-12-31","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.02","hang_muc":"I. Thương mại - Hạt","cong_viec":"Video hình thành và phát triển Marou","mo_ta":"Sản xuất video giới thiệu hình thành và phát triển hợp tác Marou.","chu_tri":"Mrs Hương (Thương mại)","bplq":"Chị Đỗ Hương; Ms Phương","ngay_bat_dau":"2026-04-15","deadline":"2026-06-30","uu_tien":"Thấp","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.03","hang_muc":"I. Thương mại - Hạt","cong_viec":"Meiji - Kết nối thương mại nguyên liệu/dược liệu","mo_ta":"Đối ngoại Meiji: kết nối thương mại với Meiji. Mục tiêu 30% sản lượng.","chu_tri":"Mrs Hương (Thương mại)","bplq":null,"ngay_bat_dau":"2026-04-06","deadline":"2026-09-30","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.04","hang_muc":"I. Thương mại - Hạt","cong_viec":"Aikya - Sản phẩm chức năng/nguyên liệu","mo_ta":"Làm việc với Ms An để ra sản phẩm chức năng, ra nguyên liệu cho Aikya.","chu_tri":"Ms An (Đối ngoại)","bplq":null,"ngay_bat_dau":"2026-04-06","deadline":"2026-09-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.05","hang_muc":"I. Thương mại - Hạt","cong_viec":"Bean to bar - Halla / Jap / AC","mo_ta":"Bean to bar: 30% sản lượng. Làm việc với Halla, Jap, AC.","chu_tri":"Mrs Hương (Thương mại)","bplq":null,"ngay_bat_dau":"2026-04-06","deadline":"2026-12-31","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.06","hang_muc":"I. Thương mại - Hạt","cong_viec":"Puratos - Local + CME support thương hiệu","mo_ta":"Kênh Local: Puratos. CME hỗ trợ vấn đề về thương hiệu.","chu_tri":"Mrs Hương (Thương mại)","bplq":"Chị Đỗ Hương; CME","ngay_bat_dau":"2026-04-06","deadline":"2026-09-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.07","hang_muc":"I. Thương mại - Hạt","cong_viec":"Đăng ký thương hiệu quốc gia CIC","mo_ta":"Chị Đỗ Hương chủ trì đăng ký thương hiệu quốc gia cho CIC.","chu_tri":"Chị Đỗ Hương (Thương hiệu)","bplq":"Ms Nga CME","ngay_bat_dau":"2026-04-06","deadline":"2026-12-31","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.08","hang_muc":"I. Thương mại - Hạt","cong_viec":"Bộ nhận diện CIC - Profile & Website & Facebook","mo_ta":"Xây dựng bộ nhận diện CIC: Profile công ty, website công ty, Facebook. Nội dung vườn: bền vững + chuẩn gì / Quy trình: sơ chế/sản xuất chuẩn gì / Con người / Cộng đồng.","chu_tri":"Mrs Hương (Thương mại)","bplq":"Ms Nga CME","ngay_bat_dau":"2026-04-06","deadline":"2026-09-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.09","hang_muc":"I. Thương mại - Hạt","cong_viec":"Bộ nhận diện CIC - LinkedIn","mo_ta":"Xây dựng kênh LinkedIn cho CIC.","chu_tri":"Mrs Hương (Thương mại)","bplq":"Ms Nga CME","ngay_bat_dau":"2026-04-06","deadline":"2026-09-30","uu_tien":"Thấp","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"I.10","hang_muc":"I. Thương mại - Hạt","cong_viec":"Bộ nhận diện CIC - Wikipedia / YouTube / Google Map","mo_ta":"Xây dựng hiện diện trên Wikipedia, YouTube, Google Map (tùy đối tượng).","chu_tri":"Chị Đỗ Hương (Thương hiệu)","bplq":"Ms Nga CME","ngay_bat_dau":"2026-04-06","deadline":"2026-12-31","uu_tien":"Thấp","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"J.01","hang_muc":"J. Thương mại - Cây phụ thu","cong_viec":"Gấc - Chuẩn bán, đối tượng thu mua, chuyên gia kỹ thuật","mo_ta":"Xác định bán theo chuẩn nào, đối tượng thu mua ntn. Chọn SP muốn triển khai quy mô lớn. Chuyên gia kỹ thuật gắn liền với đơn vị thu mua.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Mr Hùng; Mr Huy","ngay_bat_dau":"2026-04-15","deadline":"2026-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"J.02","hang_muc":"J. Thương mại - Cây phụ thu","cong_viec":"Dừa - Chiến lược thương mại","mo_ta":"Xây dựng chiến lược thương mại cho dừa.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Mr Hùng","ngay_bat_dau":"2026-04-15","deadline":"2026-09-30","uu_tien":"Thấp","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"J.03","hang_muc":"J. Thương mại - Cây phụ thu","cong_viec":"Chà là - Tìm đối tác liên doanh vườn ươm nuôi cấy mô","mo_ta":"Tìm đối tác liên doanh phát triển vườn ươm cho cây nuôi cấy mô chà là ở các đối tác Ả Rập / Thái Lan.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Ms An","ngay_bat_dau":"2026-04-15","deadline":"2026-12-31","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"K.01","hang_muc":"K. Thương mại - Sản phẩm chế biến","cong_viec":"Giao gia công cho đơn vị thứ 3 (R&D + SX)","mo_ta":"Giao khâu gia công cho đơn vị thứ 3 tổ chức R&D và sản xuất gia công.","chu_tri":"Mr Hùng (TGĐ)","bplq":"R&D; Mr Hùng","ngay_bat_dau":"2026-04-15","deadline":"2026-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"K.02","hang_muc":"K. Thương mại - Sản phẩm chế biến","cong_viec":"Bộ nhận diện thương hiệu Bean to bar","mo_ta":"Quyết định CIC thực hiện hay giao đơn vị thứ 2 thực hiện bộ nhận diện thương hiệu Bean to bar.","chu_tri":"Mr Hùng (TGĐ)","bplq":null,"ngay_bat_dau":"2026-04-15","deadline":"2026-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"K.03","hang_muc":"K. Thương mại - Sản phẩm chế biến","cong_viec":"Đưa bột & thanh socola qua Waynes","mo_ta":"Đưa sản phẩm bột và thanh socola qua các chuỗi cafe hiện có Waynes.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Chị Đỗ Hương","ngay_bat_dau":"2026-04-15","deadline":"2026-09-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"K.04","hang_muc":"K. Thương mại - Sản phẩm chế biến","cong_viec":"Cung cấp máy SX cho đơn vị gia công","mo_ta":"Cung cấp máy sản xuất cho đơn vị gia công để ra socola.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Mr Chánh; Mrs Hương","ngay_bat_dau":"2026-04-15","deadline":"2026-09-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"K.05","hang_muc":"K. Thương mại - Sản phẩm chế biến","cong_viec":"Liên doanh Mr Lam - Khâu sơ chế gia công","mo_ta":"Đề bài liên doanh với Mr Lam trong khâu sơ chế gia công. Hẹn gặp Mr Lam tại SG.","chu_tri":"Mr Tuấn (CT HĐTC)","bplq":"Mrs Hương; Mr Hùng","ngay_bat_dau":"2026-04-15","deadline":"2026-05-31","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"L.01","hang_muc":"L. Thay thế đầu vào & KPI thương mại","cong_viec":"Nuôi cấy mô / mua chuối giống - 20k cây chuối","mo_ta":"B1: Triển khai nuôi cấy mô chuối hoặc mua chuối giống để cung cấp 20k cây chuối. Thay vì đi mua chuối giống, nhận mô nuôi trên vườn để giảm CP đầu vào.","chu_tri":"Mr Hùng (TGĐ)","bplq":"QLSX; TBKT","ngay_bat_dau":"2026-04-15","deadline":"2026-08-31","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"L.02","hang_muc":"L. Thay thế đầu vào & KPI thương mại","cong_viec":"Phân vi sinh thay thế - nhân sự hiện có","mo_ta":"Sử dụng nhân sự hiện có để sản xuất phân vi sinh thay thế.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Mr Bách","ngay_bat_dau":"2026-04-15","deadline":"2026-06-30","uu_tien":"Trung bình","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null},{"ma_cv":"L.03","hang_muc":"L. Thay thế đầu vào & KPI thương mại","cong_viec":"Cơ chế chia KPIs thương mại 10%/+20%","mo_ta":"Cơ chế: Chia 10% sản lượng. Nếu sản lượng > sản lượng mục tiêu: thêm 20% sản lượng thặng dư.","chu_tri":"Mr Hùng (TGĐ)","bplq":"Mr Chánh; BĐH","ngay_bat_dau":"2026-04-15","deadline":"2026-05-31","uu_tien":"Cao","trang_thai":"Chưa bắt đầu","pct_hoan_thanh":0,"ket_qua":null,"ngay_cap_nhat":null,"nguoi_cap_nhat":null,"vuong_mac":null,"ngan_sach":null,"ghi_chu":null}]</script>
+<script>
+(function(){
+  const TODAY = new Date('2026-04-20T00:00:00');
+  const fmtToday = TODAY.toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('today').textContent = fmtToday;
+
+  const DATA = JSON.parse(document.getElementById('data').textContent);
+
+  // --- Helpers ---
+  function parseDate(s){if(!s) return null; if(/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s); const m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m? new Date(+m[3], +m[2]-1, +m[1]):null;}
+  function dmy(d){if(!d) return ''; const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); return dd+'/'+mm+'/'+d.getFullYear();}
+  function daysDiff(a,b){return Math.round((a-b)/86400000);}
+  function esc(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+  function statusClass(st){
+    return ({'Hoàn thành':'st-done','Đang thực hiện':'st-doing','Chưa bắt đầu':'st-todo','Trễ hạn':'st-late','Tạm dừng':'st-pause'})[st]||'st-todo';
+  }
+  function priClass(p){return 'pri-'+({'Cao':'Cao','Trung bình':'TB','Thấp':'Thấp'})[p]||'pri-TB';}
+  function shortCat(c){return c? c.split('.')[0] : '';}
+  function pct(v){return Math.round((v||0)*100);}
+
+  // --- Enrich data ---
+  const enriched = DATA.map(t=>{
+    const d = parseDate(t.deadline);
+    let flag = 'onschedule', lateDays = 0, nearDays = null;
+    if(t.trang_thai !== 'Hoàn thành' && d){
+      const diff = daysDiff(d, TODAY);
+      if(diff < 0){ flag='late'; lateDays = -diff; }
+      else if(diff <= 7){ flag='near'; nearDays = diff; }
+    }
+    return Object.assign({}, t, {_d:d, _flag:flag, _lateDays:lateDays, _nearDays:nearDays});
+  });
+
+  // --- KPIs ---
+  const total = enriched.length;
+  const nDoing = enriched.filter(x=>x.trang_thai==='Đang thực hiện').length;
+  const nDone  = enriched.filter(x=>x.trang_thai==='Hoàn thành').length;
+  const nTodo  = enriched.filter(x=>x.trang_thai==='Chưa bắt đầu').length;
+  const nPause = enriched.filter(x=>x.trang_thai==='Tạm dừng').length;
+  const nLate  = enriched.filter(x=>x._flag==='late').length;
+  const nNear  = enriched.filter(x=>x._flag==='near').length;
+  const avgProg = enriched.reduce((s,x)=>s+(x.pct_hoan_thanh||0),0) / total;
+
+  const set = (id,v)=>document.getElementById(id).textContent=v;
+  set('kpi-total', total);
+  set('kpi-doing', nDoing); set('kpi-doing-pct', (nDoing/total*100).toFixed(1)+'% trên tổng');
+  set('kpi-done',  nDone);  set('kpi-done-pct',  (nDone/total*100).toFixed(1)+'% trên tổng');
+  set('kpi-todo',  nTodo);  set('kpi-todo-pct',  (nTodo/total*100).toFixed(1)+'% trên tổng');
+  set('kpi-late',  nLate);
+  set('kpi-near',  nNear);
+  document.getElementById('prog-bar').style.width = (avgProg*100).toFixed(1)+'%';
+  document.getElementById('prog-val').textContent = (avgProg*100).toFixed(1)+'%';
+
+  const near7 = new Date(TODAY.getTime()+7*86400000);
+  document.getElementById('near-until').textContent = dmy(near7);
+
+  // --- Late / Near tables ---
+  const lateList = enriched.filter(x=>x._flag==='late').sort((a,b)=>b._lateDays-a._lateDays);
+  const nearList = enriched.filter(x=>x._flag==='near').sort((a,b)=>a._nearDays-b._nearDays);
+
+  function renderMini(tbodyId, rows, mode){
+    const tb = document.querySelector('#'+tbodyId+' tbody');
+    tb.innerHTML = rows.map(r=>{
+      const span = mode==='late'
+        ? `<span class="late-days">${r._lateDays} ngày</span>`
+        : `<span class="near-days">${r._nearDays} ngày</span>`;
+      return `<tr>
+        <td><b>${esc(r.ma_cv)}</b><div style="font-size:11px;color:#64748b">${esc(shortCat(r.hang_muc))}</div></td>
+        <td>${esc(r.cong_viec)}</td>
+        <td>${esc(r.chu_tri)}</td>
+        <td>${dmy(r._d)}</td>
+        <td>${span}</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="5" style="text-align:center;color:#64748b;padding:18px">— Không có —</td></tr>`;
+  }
+  renderMini('tbl-late', lateList, 'late');
+  renderMini('tbl-near', nearList, 'near');
+
+  // --- Charts ---
+  Chart.defaults.font.family = "'Segoe UI',system-ui,sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = '#334155';
+
+  // Status donut
+  new Chart(document.getElementById('chStatus'),{
+    type:'doughnut',
+    data:{
+      labels:['Hoàn thành','Đang thực hiện','Chưa bắt đầu','Trễ hạn','Tạm dừng'],
+      datasets:[{
+        data:[nDone,nDoing,nTodo,nLate,nPause],
+        backgroundColor:['#16a34a','#f59e0b','#94a3b8','#dc2626','#7c3aed'],
+        borderWidth:2,borderColor:'#fff'
+      }]
+    },
+    options:{plugins:{legend:{position:'bottom'}},cutout:'62%',maintainAspectRatio:false}
+  });
+
+  // Priority
+  const priCounter = {};
+  enriched.forEach(x=>{const k=x.uu_tien||'N/A';priCounter[k]=(priCounter[k]||0)+1;});
+  new Chart(document.getElementById('chPriority'),{
+    type:'bar',
+    data:{labels:Object.keys(priCounter),datasets:[{
+      data:Object.values(priCounter),
+      backgroundColor:['#dc2626','#f59e0b','#0ea5e9','#94a3b8'],borderRadius:8
+    }]},
+    options:{plugins:{legend:{display:false}},indexAxis:'y',maintainAspectRatio:false,
+      scales:{x:{beginAtZero:true,ticks:{precision:0}}}
+    }
+  });
+
+  // Block (SX vs TM)
+  const sxList = ['A','B','C','D','E','F','G','H'];
+  const tmList = ['I','J','K','L'];
+  let nSX=0,nTM=0;
+  enriched.forEach(x=>{const c=shortCat(x.hang_muc); if(sxList.includes(c)) nSX++; else if(tmList.includes(c)) nTM++;});
+  new Chart(document.getElementById('chBlock'),{
+    type:'doughnut',
+    data:{labels:['Khối Sản Xuất (A–H)','Khối Thương Mại (I–L)'],
+      datasets:[{data:[nSX,nTM],backgroundColor:['#14532d','#b45309'],borderWidth:2,borderColor:'#fff'}]},
+    options:{plugins:{legend:{position:'bottom'}},cutout:'55%',maintainAspectRatio:false}
+  });
+
+  // By category (stacked)
+  const catMap = {};
+  enriched.forEach(x=>{
+    const c = x.hang_muc||'Khác';
+    if(!catMap[c]) catMap[c] = {done:0,doing:0,todo:0,late:0,pause:0,sumPct:0,n:0};
+    const o = catMap[c];
+    o.n++; o.sumPct += (x.pct_hoan_thanh||0);
+    if(x._flag==='late') o.late++;
+    else if(x.trang_thai==='Hoàn thành') o.done++;
+    else if(x.trang_thai==='Đang thực hiện') o.doing++;
+    else if(x.trang_thai==='Tạm dừng') o.pause++;
+    else o.todo++;
+  });
+  const catLabels = Object.keys(catMap).sort();
+  const catShort = catLabels.map(l=>l.length>30?l.slice(0,30)+'…':l);
+  new Chart(document.getElementById('chByCat'),{
+    type:'bar',
+    data:{
+      labels:catShort,
+      datasets:[
+        {label:'Hoàn thành',data:catLabels.map(l=>catMap[l].done),backgroundColor:'#16a34a',stack:'s'},
+        {label:'Đang thực hiện',data:catLabels.map(l=>catMap[l].doing),backgroundColor:'#f59e0b',stack:'s'},
+        {label:'Chưa bắt đầu',data:catLabels.map(l=>catMap[l].todo),backgroundColor:'#94a3b8',stack:'s'},
+        {label:'Trễ hạn',data:catLabels.map(l=>catMap[l].late),backgroundColor:'#dc2626',stack:'s'}
+      ]
+    },
+    options:{indexAxis:'y',maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{title:(items)=>{const i=items[0].dataIndex;return catLabels[i]+' · TB '+((catMap[catLabels[i]].sumPct/catMap[catLabels[i]].n)*100).toFixed(0)+'%';}}}
+      },
+      scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0}},y:{stacked:true}}
+    }
+  });
+
+  // Owner top
+  const ownCounter = {};
+  enriched.forEach(x=>{const k=x.chu_tri||'—';ownCounter[k]=(ownCounter[k]||0)+1;});
+  const ownArr = Object.entries(ownCounter).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  new Chart(document.getElementById('chOwner'),{
+    type:'bar',
+    data:{labels:ownArr.map(e=>e[0]),datasets:[{data:ownArr.map(e=>e[1]),backgroundColor:'#166534',borderRadius:6}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{beginAtZero:true,ticks:{precision:0}}}}
+  });
+
+  // Deadline by month
+  const monthMap = {};
+  enriched.forEach(x=>{
+    if(!x._d) return;
+    const k = x._d.getFullYear()+'-'+String(x._d.getMonth()+1).padStart(2,'0');
+    monthMap[k] = monthMap[k]||{late:0,near:0,future:0};
+    if(x._flag==='late') monthMap[k].late++;
+    else if(x._flag==='near') monthMap[k].near++;
+    else monthMap[k].future++;
+  });
+  const mKeys = Object.keys(monthMap).sort();
+  new Chart(document.getElementById('chDeadline'),{
+    type:'bar',
+    data:{labels:mKeys,datasets:[
+      {label:'Quá hạn',data:mKeys.map(k=>monthMap[k].late),backgroundColor:'#dc2626',stack:'d'},
+      {label:'Sắp tới hạn',data:mKeys.map(k=>monthMap[k].near),backgroundColor:'#f59e0b',stack:'d'},
+      {label:'Trong lịch',data:mKeys.map(k=>monthMap[k].future),backgroundColor:'#0ea5e9',stack:'d'}
+    ]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}
+  });
+
+  // Hot categories (late+near)
+  const hotArr = catLabels.map(l=>({
+    cat:l,
+    hot: (catMap[l].late||0) + enriched.filter(x=>x.hang_muc===l && x._flag==='near').length
+  })).sort((a,b)=>b.hot-a.hot).slice(0,8);
+  new Chart(document.getElementById('chHot'),{
+    type:'bar',
+    data:{labels:hotArr.map(h=>h.cat.length>28?h.cat.slice(0,28)+'…':h.cat),
+      datasets:[{data:hotArr.map(h=>h.hot),backgroundColor:'#b91c1c',borderRadius:6}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{beginAtZero:true,ticks:{precision:0}}}}
+  });
+
+  // --- Main detail table w/ filters ---
+  const fCat=document.getElementById('f-cat'), fSt=document.getElementById('f-status'),
+        fOw=document.getElementById('f-owner'), fFg=document.getElementById('f-flag'),
+        fQ=document.getElementById('f-q');
+  const uniq = arr=>[...new Set(arr)].filter(Boolean).sort();
+  uniq(enriched.map(x=>x.hang_muc)).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;fCat.appendChild(o)});
+  uniq(enriched.map(x=>x.trang_thai)).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;fSt.appendChild(o)});
+  uniq(enriched.map(x=>x.chu_tri)).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;fOw.appendChild(o)});
+
+  function render(){
+    const cat=fCat.value, st=fSt.value, ow=fOw.value, fg=fFg.value, q=(fQ.value||'').toLowerCase().trim();
+    const rows = enriched.filter(x=>{
+      if(cat && x.hang_muc!==cat) return false;
+      if(st && x.trang_thai!==st) return false;
+      if(ow && x.chu_tri!==ow) return false;
+      if(fg && x._flag!==fg) return false;
+      if(q){
+        const s = (x.ma_cv+' '+x.cong_viec+' '+(x.mo_ta||'')+' '+(x.vuong_mac||'')+' '+(x.ghi_chu||'')).toLowerCase();
+        if(!s.includes(q)) return false;
+      }
+      return true;
+    });
+    document.getElementById('rowCount').textContent = rows.length;
+    const tb = document.querySelector('#tbl-main tbody');
+    tb.innerHTML = rows.map(r=>{
+      const stPill = `<span class="pill ${statusClass(r.trang_thai)}">${esc(r.trang_thai||'')}</span>`;
+      const priPill = r.uu_tien?`<span class="pill ${priClass(r.uu_tien)}">${esc(r.uu_tien)}</span>`:'';
+      const flag = r._flag==='late'
+        ? ` <span class="pill st-late">Trễ ${r._lateDays}d</span>`
+        : (r._flag==='near'?` <span class="pill st-doing">Còn ${r._nearDays}d</span>`:'');
+      const p = pct(r.pct_hoan_thanh);
+      const note = r.vuong_mac || r.ghi_chu || '';
+      return `<tr>
+        <td><b>${esc(r.ma_cv)}</b></td>
+        <td><span class="tag-cat">${esc(shortCat(r.hang_muc))}</span></td>
+        <td><b>${esc(r.cong_viec)}</b><div style="color:#64748b;font-size:11.5px;margin-top:2px">${esc(r.mo_ta||'').slice(0,180)}${(r.mo_ta||'').length>180?'…':''}</div></td>
+        <td>${esc(r.chu_tri)}</td>
+        <td>${dmy(r._d)}${flag}</td>
+        <td>${priPill}</td>
+        <td>${stPill}</td>
+        <td><div class="rowbar"><span style="width:${p}%"></span></div><div style="font-size:11px;color:#64748b;margin-top:2px">${p}%</div></td>
+        <td style="max-width:260px;color:#475569;font-size:12px">${esc(note).slice(0,200)}${note.length>200?'…':''}</td>
+      </tr>`;
+    }).join('');
+  }
+  [fCat,fSt,fOw,fFg,fQ].forEach(el=>el.addEventListener('input',render));
+  document.getElementById('btnReset').addEventListener('click',()=>{fCat.value='';fSt.value='';fOw.value='';fFg.value='';fQ.value='';render();});
+  render();
+})();
+</script>
+</body>
+</html>
